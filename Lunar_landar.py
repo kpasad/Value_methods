@@ -5,35 +5,26 @@ import numpy as np
 from collections import deque
 import matplotlib.pyplot as plt
 from torch.autograd import Variable
+from paramutils import *
 
-
+params=parameters()
+params.env_seed =0
+params.network = 'dueling_dqn'  # 'dqn, dueling_dqn'
+params.double_dqn = 'enable'  # enable, disable
 
 env = gym.make('LunarLander-v2')
-env.seed(0)
+env.seed(params.env_seed)
 print('State shape: ', env.observation_space.shape)
 print('Number of actions: ', env.action_space.n)
 
-
-
-
 from agent import Agent
+state_size=8
+action_size=4
+seed = 0
+agent = Agent(state_size, action_size, seed,params)
 
-agent = Agent(state_size=8, action_size=4, seed=0)
-
-# watch an untrained agent
-state = env.reset()
-for j in range(200):
-    action = agent.act(state)
-    #env.render()
-    state, reward, done, _ = env.step(action)
-    if done:
-        break 
-        
-env.close()
-
-
-
-def dqn(n_episodes=20000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.995):
+#def dqn(n_episodes=20000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.995):
+def dqn(params):
     """Deep Q-Learning.
     
     Params
@@ -46,11 +37,11 @@ def dqn(n_episodes=20000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.9
     """
     scores = []                        # list containing scores from each episode
     scores_window = deque(maxlen=100)  # last 100 scores
-    eps = eps_start                    # initialize epsilon
-    for i_episode in range(1, n_episodes+1):
+    eps = params.eps_start                    # initialize epsilon
+    for i_episode in range(1, params.n_episodes+1):
         state = env.reset()
         score = 0
-        for t in range(max_t):
+        for t in range(params.max_t):
             action = agent.act(state, eps)
             next_state, reward, done, _ = env.step(action)
             agent.step(state, action, reward, next_state, done)
@@ -61,7 +52,7 @@ def dqn(n_episodes=20000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.9
                 break 
         scores_window.append(score)       # save most recent score
         scores.append(score)              # save most recent score
-        eps = max(eps_end, eps_decay*eps) # decrease epsilon
+        eps = max(params.eps_end, params.eps_decay*eps) # decrease epsilon
         print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_window)), end="")
         if i_episode % 100 == 0:
             print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_window)))
@@ -71,7 +62,7 @@ def dqn(n_episodes=20000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.9
             break
     return scores
 
-scores = dqn()
+scores = dqn(params)
 
 # plot the scores
 fig = plt.figure()

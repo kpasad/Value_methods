@@ -26,34 +26,32 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Agent():
     """Interacts with and learns from the environment."""
 
-    def __init__(self, state_size, action_size, seed):
-        """Initialize an Agent object.
-
-        Params
-        ======
-            state_size (int): dimension of each state
-            action_size (int): dimension of each action
-            seed (int): random seed
-        """
+    def __init__(self, state_size, action_size, seed,params):
         self.state_size = state_size
         self.action_size = action_size
         self.seed = random.seed(seed)
+        self.params=params
 
-        # Q-Network
-        #self.qnetwork_local = QNetwork(state_size, action_size, seed).to(device)
-        #self.qnetwork_target = QNetwork(state_size, action_size, seed).to(device)
-
-        self.qnetwork_local = ddqn(state_size, action_size, seed).to(device)
-        self.qnetwork_target = ddqn(state_size, action_size, seed).to(device)
-
+        if self.params.network=='dqn':
+            self.qnetwork_local = QNetwork(state_size, action_size, seed).to(device)
+            self.qnetwork_target = QNetwork(state_size, action_size, seed).to(device)
+        elif self.params.network=='dueling_dqn':
+            self.qnetwork_local = ddqn(state_size, action_size, seed).to(device)
+            self.qnetwork_target = ddqn(state_size, action_size, seed).to(device)
+        else:
+            print('Incorrect network name')
 
 
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
-        # Replay memory
-        self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed)
 
-        # Prioritzed Replay memory
-        self.priority_replay = priority_replay.NaivePrioritizedBuffer(20*BATCH_SIZE)
+        if self.params.buffer =='baseline':
+            # Replay memory
+            self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed)
+        elif self.params.buffer == 'priority_replay':
+            # Prioritzed Replay memory
+            self.priority_replay = priority_replay.NaivePrioritizedBuffer(20*BATCH_SIZE)
+        else:
+            print('incorrect buffer')
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
 
@@ -111,43 +109,41 @@ class Agent():
         """
         states, actions, rewards, next_states, dones = experiences
 
+        if self.params.double_dqn !='enable':
+            # Get max predicted Q values (for next states) from target model
+            Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
 
-        # # Get max predicted Q values (for next states) from target model
-        # Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
-        #
-        # # Compute Q targets for current states
-        # Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
-        #
-        # # Get expected Q values from local model
-        # Q_expected = self.qnetwork_local(states).gather(1, actions)
-        #
-        # # Compute loss
-        # loss = F.mse_loss(Q_expected, Q_targets)
-        # # Minimize the loss
-        # self.optimizer.zero_grad()
-        # loss.backward()
-        # self.optimizer.step()
+            # Compute Q targets for current states
+            Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
 
+            # Get expected Q values from local model
+            Q_expected = self.qnetwork_local(states).gather(1, actions)
 
+            # Compute loss
+            loss = F.mse_loss(Q_expected, Q_targets)
+            # Minimize the loss
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+        else:
+            #Get max predicted Q values (for next states) from target model
+            next_state_actions = self.qnetwork_local(next_states).detach()#Local network to find the greedy action. Size = batch_size*nactions
+            next_state_greedy_action = next_state_actions.argmax(dim=1)
+            # Target network for next state Q values, but select max as determined by local network. Unsqueeze required to align with 2D of action value
+            Q_targets_next = self.qnetwork_target(next_states).detach().gather(1, next_state_greedy_action.unsqueeze(1))
 
-        #Get max predicted Q values (for next states) from target model
-        next_state_actions = self.qnetwork_local(next_states).detach()#Local network to find the greedy action. Size = batch_size*nactions
-        next_state_greedy_action = next_state_actions.argmax(dim=1)
-        # Target network for next state Q values, but select max as determined by local network. Unsqueeze required to align with 2D of action value
-        Q_targets_next = self.qnetwork_target(next_states).detach().gather(1, next_state_greedy_action.unsqueeze(1))
+            # Compute Q targets for current states
+            Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
 
-        # Compute Q targets for current states
-        Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
+            # Get expected Q values from local model
+            Q_expected = self.qnetwork_local(states).gather(1, actions)
 
-        # Get expected Q values from local model
-        Q_expected = self.qnetwork_local(states).gather(1, actions)
-
-        # Compute loss
-        loss = F.mse_loss(Q_expected, Q_targets)
-        # Minimize the loss
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+            # Compute loss
+            loss = F.mse_loss(Q_expected, Q_targets)
+            # Minimize the loss
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
 
 
         # ------------------- update target network ------------------- #
