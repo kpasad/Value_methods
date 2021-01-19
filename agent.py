@@ -4,7 +4,8 @@ from collections import namedtuple, deque
 import priority_replay
 
 
-from model import QNetwork,ddqn
+from dqn_model import QNetwork
+from ddqn_model import ddqn
 
 import torch
 import torch.nn.functional as F

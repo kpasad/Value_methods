@@ -1,5 +1,3 @@
-
-
 import gym
 import random
 import torch
@@ -18,7 +16,7 @@ print('Number of actions: ', env.action_space.n)
 
 
 
-from dqn_agent import Agent
+from agent import Agent
 
 agent = Agent(state_size=8, action_size=4, seed=0)
 

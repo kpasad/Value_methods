@@ -3,13 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class ddqn(nn.Module):
-    def __init__(self, state_size, action_size):
+    def __init__(self, state_size, action_size,seed):
         super().__init__()
 
 
         self.shared_feats= nn.Sequential(
             nn.Linear(state_size,128),
-            nn.ReLU
+            nn.ReLU()
         )
 
         self.value_nw = nn.Sequential(
@@ -20,7 +20,7 @@ class ddqn(nn.Module):
 
         self.advnt_nw = nn.Sequential(
             nn.Linear(128, 128),
-            nn.ReLU,
+            nn.ReLU(),
             nn.Linear(128, action_size),
         )
 
