@@ -6,12 +6,14 @@ from collections import deque
 import matplotlib.pyplot as plt
 from torch.autograd import Variable
 from paramutils import *
+import pickle as pk
 
 params=parameters()
 params.env_seed =0
 params.network = 'dueling_dqn'  # 'dqn, dueling_dqn'
-params.double_dqn = 'enable'  # enable, disable
-
+params.double_dqn = 'disable'  # enable, disable
+params.scores_filename ='_v0.txt'
+params.env_seed=2
 env = gym.make('LunarLander-v2')
 env.seed(params.env_seed)
 print('State shape: ', env.observation_space.shape)
@@ -64,12 +66,4 @@ def dqn(params):
 
 scores = dqn(params)
 
-# plot the scores
-fig = plt.figure()
-ax = fig.add_subplot(111)
-plt.plot(np.arange(len(scores)), scores)
-plt.ylabel('Score')
-plt.xlabel('Episode #')
-plt.show()
-
-
+pk.dump(scores,open('double_dqn.txt','wb'))

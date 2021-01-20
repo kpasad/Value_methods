@@ -6,7 +6,7 @@ class ddqn(nn.Module):
     def __init__(self, state_size, action_size,seed):
         super().__init__()
 
-
+        self.seed = torch.manual_seed(seed)
         self.shared_feats= nn.Sequential(
             nn.Linear(state_size,128),
             nn.ReLU()
